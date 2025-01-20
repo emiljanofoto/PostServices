@@ -2,12 +2,14 @@ package com.example.postservice.post_service.controller;
 
 import com.example.postservice.post_service.entity.Package;
 import com.example.postservice.post_service.service.PackageService;
+import com.example.postservice.post_service.util.BarcodeUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/packages")
@@ -18,8 +20,21 @@ public class PackageController {
 
     @PostMapping
     @PreAuthorize("hasRole('EMPLOYEE')")
-    public ResponseEntity<Package> addPackage(@RequestBody Package pkg) {
-        return ResponseEntity.ok(packageService.addPackage(pkg));
+    public ResponseEntity<Map<String, Object>> addPackage(@RequestBody Package pkg) {
+        Package savedPackage = packageService.addPackage(pkg);
+
+        // Generate the barcode as a byte array
+        byte[] barcodeImage;
+        try {
+            barcodeImage = BarcodeUtil.generateBarcodeImage(pkg.getTrackingNumber(), 300, 100);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("error", "Failed to generate barcode"));
+        }
+
+        return ResponseEntity.ok(Map.of(
+                "package", savedPackage,
+                "barcode", barcodeImage
+        ));
     }
 
     @GetMapping

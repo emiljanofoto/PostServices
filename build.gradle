@@ -38,6 +38,8 @@ dependencies {
 	runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.11.5'
 	runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.11.5' // for JSON serialization/deserialization
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
+	implementation 'com.google.zxing:core:3.5.1'  //barcode gen
+	implementation 'com.google.zxing:javase:3.5.1' //barcode gen
 }
 
 tasks.named('test') {

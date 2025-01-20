@@ -2,6 +2,7 @@ package com.example.postservice.post_service.service;
 
 import com.example.postservice.post_service.entity.Package;
 import com.example.postservice.post_service.repository.PackageRepository;
+import com.example.postservice.post_service.util.BarcodeUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -14,6 +15,17 @@ public class PackageService {
     private PackageRepository packageRepository;
 
     public Package addPackage(Package pkg) {
+        // Generate a barcode for the tracking number
+        try {
+            String barcodePath = "barcodes/" + pkg.getTrackingNumber() + ".png";
+            byte[] barcodeImage = BarcodeUtil.generateBarcodeImage(pkg.getTrackingNumber(), 300, 100);
+            pkg.setBarcode(barcodeImage);
+            System.out.println("Barcode saved at: " + barcodePath);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to generate barcode: " + e.getMessage());
+        }
+
+        // Save the package
         return packageRepository.save(pkg);
     }
 

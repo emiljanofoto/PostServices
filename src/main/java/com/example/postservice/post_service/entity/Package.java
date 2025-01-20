@@ -22,4 +22,7 @@ public class Package {
 
     @Column(nullable = false)
     private String status; // e.g., "In Transit", "Delivered", etc.
+
+    @Lob
+    private byte[] barcode;
 }
