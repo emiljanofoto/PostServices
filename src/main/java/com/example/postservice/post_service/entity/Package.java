@@ -14,9 +14,12 @@ public class Package {
     @Column(unique = true, nullable = false)
     private String trackingNumber;
 
+    @Column(nullable = false)
     private String sender;
 
+    @Column(nullable = false)
     private String recipient;
 
-    private String status;
+    @Column(nullable = false)
+    private String status; // e.g., "In Transit", "Delivered", etc.
 }
