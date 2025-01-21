@@ -18,6 +18,11 @@ public class PackageController {
     @Autowired
     private PackageService packageService;
 
+    @GetMapping("/priority")
+    public ResponseEntity<List<Package>> getPackagesByPriority(@RequestParam String priority) {
+        return ResponseEntity.ok(packageService.getPackagesByPriority(priority));
+    }
+
     @PostMapping
     @PreAuthorize("hasRole('EMPLOYEE')")
     public ResponseEntity<Map<String, Object>> addPackage(@RequestBody Package pkg) {

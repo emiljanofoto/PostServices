@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -19,6 +20,11 @@ public class PackageService {
     private AuditService auditService;
 
     public Package addPackage(Package pkg) {
+        // Validate priority
+        if (pkg.getPriority() == null || pkg.getPriority().isEmpty()) {
+            pkg.setPriority("Standard"); // Default priority
+        }
+
         // Generate a barcode for the tracking number
         try {
             byte[] barcodeImage = BarcodeUtil.generateBarcodeImage(pkg.getTrackingNumber(), 300, 100);
@@ -41,9 +47,21 @@ public class PackageService {
         return packageRepository.findAll();
     }
 
+    public List<Package> searchByTrackingNumber(String trackingNumber) {
+        return packageRepository.findByTrackingNumberContaining(trackingNumber);
+    }
+
     public Package getPackageByTrackingNumber(String trackingNumber) {
         return packageRepository.findByTrackingNumber(trackingNumber)
                 .orElseThrow(() -> new RuntimeException("Package not found"));
+    }
+
+    public List<Package> advancedSearch(String sender, String recipient, String status, LocalDateTime startDate, LocalDateTime endDate) {
+        return packageRepository.advancedSearch(sender, recipient, status, startDate, endDate);
+    }
+
+    public List<Package> getPackagesByPriority(String priority) {
+        return packageRepository.findByPriority(priority);
     }
 
     public Package updatePackage(Long id, Package updatedPackage) {
@@ -53,6 +71,7 @@ public class PackageService {
         existingPackage.setSender(updatedPackage.getSender());
         existingPackage.setRecipient(updatedPackage.getRecipient());
         existingPackage.setStatus(updatedPackage.getStatus());
+        existingPackage.setPriority(updatedPackage.getPriority()); // Update priority
 
         Package savedPackage = packageRepository.save(existingPackage);
 
