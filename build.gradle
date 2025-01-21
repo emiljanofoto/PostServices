@@ -40,6 +40,8 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
 	implementation 'com.google.zxing:core:3.5.1'  //barcode gen
 	implementation 'com.google.zxing:javase:3.5.1' //barcode gen
+	implementation 'org.apache.poi:poi:5.2.3' //for handling CSV/Excel
+	implementation 'org.apache.poi:poi-ooxml:5.2.3'
 }
 
 tasks.named('test') {

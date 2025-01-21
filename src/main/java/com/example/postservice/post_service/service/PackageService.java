@@ -3,12 +3,15 @@ package com.example.postservice.post_service.service;
 import com.example.postservice.post_service.entity.Package;
 import com.example.postservice.post_service.repository.PackageRepository;
 import com.example.postservice.post_service.util.BarcodeUtil;
+import com.example.postservice.post_service.util.FileParserUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class PackageService {
@@ -88,6 +91,45 @@ public class PackageService {
         // Log the DELETE action
         String currentUser = getCurrentUser();
         auditService.logAction("DELETE", currentUser, "Deleted package with ID: " + id);
+    }
+
+    public List<Package> bulkCreatePackages(MultipartFile file) {
+        try {
+            List<Package> packages = FileParserUtil.parseExcelFile(file.getInputStream());
+
+            // Generate barcodes and set default priority for each package
+            for (Package pkg : packages) {
+                if (pkg.getTrackingNumber() != null && !pkg.getTrackingNumber().isEmpty()) {
+                    try {
+                        byte[] barcodeImage = BarcodeUtil.generateBarcodeImage(pkg.getTrackingNumber(), 300, 100);
+                        pkg.setBarcode(barcodeImage);
+                    } catch (Exception e) {
+                        throw new RuntimeException("Failed to generate barcode for tracking number: " + pkg.getTrackingNumber());
+                    }
+                } else {
+                    throw new RuntimeException("Tracking number cannot be null or empty for package: " + pkg);
+                }
+
+                // Set a default priority if not provided
+                if (pkg.getPriority() == null || pkg.getPriority().isEmpty()) {
+                    pkg.setPriority("Standard");
+                }
+            }
+
+            // Save all packages to the database
+            List<Package> savedPackages = packageRepository.saveAll(packages);
+
+            // Log actions for audit
+            String currentUser = getCurrentUser();
+            String trackingNumbers = savedPackages.stream()
+                    .map(Package::getTrackingNumber)
+                    .collect(Collectors.joining(", "));
+            auditService.logAction("BULK_CREATE", currentUser, "Bulk created packages: " + trackingNumbers);
+
+            return savedPackages;
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to process bulk create: " + e.getMessage());
+        }
     }
 
     // Utility method to get the username of the logged-in user

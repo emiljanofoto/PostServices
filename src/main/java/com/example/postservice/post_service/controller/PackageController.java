@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Map;
@@ -17,6 +18,12 @@ public class PackageController {
 
     @Autowired
     private PackageService packageService;
+
+    @PostMapping("/bulk-create")
+    public ResponseEntity<List<Package>> bulkCreatePackages(@RequestParam("file") MultipartFile file) {
+        List<Package> packages = packageService.bulkCreatePackages(file);
+        return ResponseEntity.ok(packages);
+    }
 
     @GetMapping("/priority")
     public ResponseEntity<List<Package>> getPackagesByPriority(@RequestParam String priority) {
