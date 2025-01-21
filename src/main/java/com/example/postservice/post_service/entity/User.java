@@ -22,5 +22,9 @@ public class User {
 
     @Column(nullable = false)
     @NotBlank(message = "Role is mandatory")
-    private String role; // EMPLOYEE or MANAGER
+    private String role; // USER or MANAGER
+
+    @Column(unique = true, nullable = false)
+    @NotBlank(message = "Email is mandatory")
+    private String email;
 }

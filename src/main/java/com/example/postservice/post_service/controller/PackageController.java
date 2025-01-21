@@ -56,7 +56,7 @@ public class PackageController {
     }
 
     @GetMapping("/{trackingNumber}")
-    @PreAuthorize("hasRole('EMPLOYEE') or hasRole('MANAGER')")
+    @PreAuthorize("hasRole('USER') or hasRole('MANAGER')")
     public ResponseEntity<Package> getPackage(@PathVariable String trackingNumber) {
         return ResponseEntity.ok(packageService.getPackageByTrackingNumber(trackingNumber));
     }

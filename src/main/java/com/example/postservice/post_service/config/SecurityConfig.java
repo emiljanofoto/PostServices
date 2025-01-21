@@ -36,6 +36,7 @@ public class SecurityConfig {
                         // Role-based access for /bulk-create
                         .requestMatchers("/api/packages/bulk-create").hasRole("MANAGER")
                         // Protect all other endpoints
+                        .requestMatchers("/api/admin/**").hasRole("MANAGER") // Restrict admin actions to MANAGER
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
