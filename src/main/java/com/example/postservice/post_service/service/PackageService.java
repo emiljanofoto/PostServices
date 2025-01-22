@@ -10,6 +10,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -26,6 +28,11 @@ public class PackageService {
         // Validate priority
         if (pkg.getPriority() == null || pkg.getPriority().isEmpty()) {
             pkg.setPriority("Standard"); // Default priority
+        }
+
+        // Set created date if not already set
+        if (pkg.getCreatedDate() == null) {
+            pkg.setCreatedDate(new Date()); // Use current date and time
         }
 
         // Generate a barcode for the tracking number
@@ -71,11 +78,31 @@ public class PackageService {
         Package existingPackage = packageRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Package not found"));
 
-        existingPackage.setSender(updatedPackage.getSender());
-        existingPackage.setRecipient(updatedPackage.getRecipient());
-        existingPackage.setStatus(updatedPackage.getStatus());
-        existingPackage.setPriority(updatedPackage.getPriority()); // Update priority
+        if (updatedPackage.getSender() != null) {
+            existingPackage.setSender(updatedPackage.getSender());
+        }
+        if (updatedPackage.getRecipient() != null) {
+            existingPackage.setRecipient(updatedPackage.getRecipient());
+        }
+        if (updatedPackage.getSenderAddress() != null) {
+            existingPackage.setSenderAddress(updatedPackage.getSenderAddress());
+        }
+        if (updatedPackage.getRecipientAddress() != null) {
+            existingPackage.setRecipientAddress(updatedPackage.getRecipientAddress());
+        }
+        if (updatedPackage.getStatus() != null) {
+            existingPackage.setStatus(updatedPackage.getStatus());
+            if ("Delivered".equalsIgnoreCase(updatedPackage.getStatus())) {
+                existingPackage.setDeliveredDate(Date.from(LocalDateTime.now().atZone(ZoneId.systemDefault()).toInstant()));
+            }
+        }
 
+        // Do not update priority if it is not provided in the request
+        if (updatedPackage.getPriority() != null) {
+            existingPackage.setPriority(updatedPackage.getPriority());
+        }
+
+        // Save the updated package
         Package savedPackage = packageRepository.save(existingPackage);
 
         // Log the UPDATE action

@@ -5,6 +5,7 @@ import lombok.Data;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
+import java.util.Date;
 
 @Entity
 @Table(name = "packages")
@@ -21,7 +22,13 @@ public class Package {
     private String sender;
 
     @Column(nullable = false)
+    private String senderAddress;
+
+    @Column(nullable = false)
     private String recipient;
+
+    @Column(nullable = false)
+    private String recipientAddress;
 
     @Column(nullable = false)
     private String status;
@@ -32,7 +39,16 @@ public class Package {
     @Lob
     private byte[] barcode;
 
-    @CreationTimestamp
-    @Column(updatable = false)
-    private LocalDateTime createdDate;
+    @Temporal(TemporalType.TIMESTAMP)
+    private Date createdDate;
+
+    @Temporal(TemporalType.TIMESTAMP)
+    private Date deliveredDate; // Date when the package was delivered
+
+    @PrePersist
+    protected void onCreate() {
+        if (this.createdDate == null) {
+            this.createdDate = new Date(); // Set to current timestamp
+        }
+    }
 }

@@ -33,4 +33,8 @@ public interface PackageRepository extends JpaRepository<Package, Long> {
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate
     );
+
+    @Query("SELECT p FROM Package p WHERE p.sender = :username OR p.recipient = :username")
+    List<Package> findBySenderOrRecipient(@Param("username") String username);
+
 }
