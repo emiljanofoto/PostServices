@@ -51,4 +51,8 @@ public class Package {
             this.createdDate = new Date(); // Set to current timestamp
         }
     }
+
+    @Column(nullable = false)
+    private Long createdBy;
+
 }

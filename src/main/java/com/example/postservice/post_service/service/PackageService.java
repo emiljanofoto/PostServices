@@ -24,18 +24,29 @@ public class PackageService {
     @Autowired
     private AuditService auditService;
 
+    @Autowired
+    private UserService userService;
+
+    @Autowired
+    private NotificationService notificationService;
+
     public Package addPackage(Package pkg) {
-        // Validate priority
         if (pkg.getPriority() == null || pkg.getPriority().isEmpty()) {
             pkg.setPriority("Standard"); // Default priority
         }
 
-        // Set created date if not already set
-        if (pkg.getCreatedDate() == null) {
-            pkg.setCreatedDate(new Date()); // Use current date and time
+        if (pkg.getStatus() == null || pkg.getStatus().isEmpty()) {
+            pkg.setStatus("Created");
         }
 
-        // Generate a barcode for the tracking number
+        if (pkg.getCreatedDate() == null) {
+            pkg.setCreatedDate(new Date());
+        }
+
+        String currentUser = getCurrentUser();
+        Long creatorId = userService.findByUsername(currentUser).getId();
+        pkg.setCreatedBy(creatorId); // Set the creator ID
+
         try {
             byte[] barcodeImage = BarcodeUtil.generateBarcodeImage(pkg.getTrackingNumber(), 300, 100);
             pkg.setBarcode(barcodeImage);
@@ -43,11 +54,8 @@ public class PackageService {
             throw new RuntimeException("Failed to generate barcode: " + e.getMessage());
         }
 
-        // Save the package
         Package savedPackage = packageRepository.save(pkg);
 
-        // Log the CREATE action
-        String currentUser = getCurrentUser();
         auditService.logAction("CREATE", currentUser, "Created package with trackingNumber: " + pkg.getTrackingNumber());
 
         return savedPackage;
@@ -92,20 +100,25 @@ public class PackageService {
         }
         if (updatedPackage.getStatus() != null) {
             existingPackage.setStatus(updatedPackage.getStatus());
-            if ("Delivered".equalsIgnoreCase(updatedPackage.getStatus())) {
+            String status = updatedPackage.getStatus();
+
+            if ("Delivered".equalsIgnoreCase(status)) {
                 existingPackage.setDeliveredDate(Date.from(LocalDateTime.now().atZone(ZoneId.systemDefault()).toInstant()));
+            }
+
+            // Notify the creator of the package
+            Long creatorId = existingPackage.getCreatedBy();
+            if (creatorId != null) {
+                String notificationMessage = "The status of the package with tracking number " +
+                        existingPackage.getTrackingNumber() + " has been updated to " + status + ".";
+
+                notificationService.createNotification(notificationMessage, "package-status", creatorId);
+                notificationService.sendWebSocketNotification(notificationMessage, "package-status", creatorId);
             }
         }
 
-        // Do not update priority if it is not provided in the request
-        if (updatedPackage.getPriority() != null) {
-            existingPackage.setPriority(updatedPackage.getPriority());
-        }
-
-        // Save the updated package
         Package savedPackage = packageRepository.save(existingPackage);
 
-        // Log the UPDATE action
         String currentUser = getCurrentUser();
         auditService.logAction("UPDATE", currentUser, "Updated package with ID: " + id);
 
@@ -115,7 +128,6 @@ public class PackageService {
     public void deletePackage(Long id) {
         packageRepository.deleteById(id);
 
-        // Log the DELETE action
         String currentUser = getCurrentUser();
         auditService.logAction("DELETE", currentUser, "Deleted package with ID: " + id);
     }
@@ -124,7 +136,9 @@ public class PackageService {
         try {
             List<Package> packages = FileParserUtil.parseExcelFile(file.getInputStream());
 
-            // Generate barcodes and set default priority for each package
+            String currentUser = getCurrentUser();
+            Long creatorId = userService.findByUsername(currentUser).getId();
+
             for (Package pkg : packages) {
                 if (pkg.getTrackingNumber() != null && !pkg.getTrackingNumber().isEmpty()) {
                     try {
@@ -137,21 +151,26 @@ public class PackageService {
                     throw new RuntimeException("Tracking number cannot be null or empty for package: " + pkg);
                 }
 
-                // Set a default priority if not provided
                 if (pkg.getPriority() == null || pkg.getPriority().isEmpty()) {
                     pkg.setPriority("Standard");
                 }
+
+                pkg.setCreatedBy(creatorId); // Set creator ID for each package
             }
 
-            // Save all packages to the database
             List<Package> savedPackages = packageRepository.saveAll(packages);
 
-            // Log actions for audit
-            String currentUser = getCurrentUser();
             String trackingNumbers = savedPackages.stream()
                     .map(Package::getTrackingNumber)
                     .collect(Collectors.joining(", "));
+
             auditService.logAction("BULK_CREATE", currentUser, "Bulk created packages: " + trackingNumbers);
+
+            notificationService.createNotification(
+                    "You have successfully created multiple packages. Tracking numbers: " + trackingNumbers,
+                    "bulk-action",
+                    creatorId
+            );
 
             return savedPackages;
         } catch (Exception e) {
@@ -159,7 +178,6 @@ public class PackageService {
         }
     }
 
-    // Utility method to get the username of the logged-in user
     private String getCurrentUser() {
         return SecurityContextHolder.getContext().getAuthentication().getName();
     }

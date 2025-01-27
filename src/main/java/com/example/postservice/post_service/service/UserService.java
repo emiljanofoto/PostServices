@@ -22,7 +22,8 @@ public class UserService {
 
     public User findByUsername(String username) {
         return userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new RuntimeException("User not found with username: " + username));
+
     }
 
     public User updateUserProfile(String username, User updatedUser) {
@@ -88,4 +89,10 @@ public class UserService {
         userRepository.save(user);
         auditService.logAction("PASSWORD_RESET", "Admin", "Reset password for user with ID: " + id);
     }
+
+    public User findUserById(Long userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found with ID: " + userId));
+    }
+
 }
