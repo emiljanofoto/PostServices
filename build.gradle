@@ -45,6 +45,9 @@ dependencies {
 	implementation 'com.itextpdf:itext7-core:7.2.3' //pdf export
 	implementation 'org.springframework.boot:spring-boot-starter-websocket' //for push notification
 	implementation 'com.twilio.sdk:twilio:8.31.1' //for whatsapp messages
+	implementation 'org.springframework.boot:spring-boot-starter-web' //for openAI
+	implementation 'com.fasterxml.jackson.core:jackson-databind' //for openAI
+	implementation 'org.springframework.boot:spring-boot-starter-webflux' //for openAI
 }
 
 tasks.named('test') {
