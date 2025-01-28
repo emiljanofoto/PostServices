@@ -44,7 +44,7 @@ dependencies {
 	implementation 'org.apache.poi:poi-ooxml:5.2.3'
 	implementation 'com.itextpdf:itext7-core:7.2.3' //pdf export
 	implementation 'org.springframework.boot:spring-boot-starter-websocket' //for push notification
-
+	implementation 'com.twilio.sdk:twilio:8.31.1' //for whatsapp messages
 }
 
 tasks.named('test') {

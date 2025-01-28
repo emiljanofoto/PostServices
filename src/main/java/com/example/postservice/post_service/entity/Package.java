@@ -55,4 +55,10 @@ public class Package {
     @Column(nullable = false)
     private Long createdBy;
 
+    @Column(nullable = false)
+    private String recipientPhoneNumber;
+
+    @Temporal(TemporalType.TIMESTAMP)
+    private Date transitTimestamp;
+
 }

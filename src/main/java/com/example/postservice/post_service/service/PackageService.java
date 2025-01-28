@@ -30,9 +30,12 @@ public class PackageService {
     @Autowired
     private NotificationService notificationService;
 
+    @Autowired
+    private WhatsAppNotificationService whatsappNotificationService;
+
     public Package addPackage(Package pkg) {
         if (pkg.getPriority() == null || pkg.getPriority().isEmpty()) {
-            pkg.setPriority("Standard"); // Default priority
+            pkg.setPriority("Standard");
         }
 
         if (pkg.getStatus() == null || pkg.getStatus().isEmpty()) {
@@ -45,7 +48,11 @@ public class PackageService {
 
         String currentUser = getCurrentUser();
         Long creatorId = userService.findByUsername(currentUser).getId();
-        pkg.setCreatedBy(creatorId); // Set the creator ID
+        pkg.setCreatedBy(creatorId);
+
+        if (pkg.getRecipientPhoneNumber() == null || pkg.getRecipientPhoneNumber().isEmpty()) {
+            throw new RuntimeException("Recipient phone number is mandatory.");
+        }
 
         try {
             byte[] barcodeImage = BarcodeUtil.generateBarcodeImage(pkg.getTrackingNumber(), 300, 100);
@@ -99,18 +106,45 @@ public class PackageService {
             existingPackage.setRecipientAddress(updatedPackage.getRecipientAddress());
         }
         if (updatedPackage.getStatus() != null) {
-            existingPackage.setStatus(updatedPackage.getStatus());
-            String status = updatedPackage.getStatus();
+            String newStatus = updatedPackage.getStatus();
+            existingPackage.setStatus(newStatus);
 
-            if ("Delivered".equalsIgnoreCase(status)) {
-                existingPackage.setDeliveredDate(Date.from(LocalDateTime.now().atZone(ZoneId.systemDefault()).toInstant()));
+            // Handle In Transit status
+            if ("In Transit".equalsIgnoreCase(newStatus)) {
+                existingPackage.setTransitTimestamp(new Date());
+                try {
+                    String message = String.format(
+                            "Your package from %s with tracking number %s is now in transit. " +
+                                    "For inquiries, contact us at +35565656565 or visit www.postservice.com.",
+                            existingPackage.getSender(),
+                            existingPackage.getTrackingNumber()
+                    );
+                    whatsappNotificationService.sendWhatsAppMessage(existingPackage.getRecipientPhoneNumber(), message);
+                } catch (Exception e) {
+                    System.err.println("Failed to send WhatsApp notification: " + e.getMessage());
+                }
             }
 
-            // Notify the creator of the package
+            // Handle Delivered status
+            if ("Delivered".equalsIgnoreCase(newStatus)) {
+                existingPackage.setDeliveredDate(Date.from(LocalDateTime.now().atZone(ZoneId.systemDefault()).toInstant()));
+                try {
+                    String message = String.format(
+                            "Your package from %s with tracking number %s has been delivered. " +
+                                    "Thank you for using PostService.",
+                            existingPackage.getSender(),
+                            existingPackage.getTrackingNumber()
+                    );
+                    whatsappNotificationService.sendWhatsAppMessage(existingPackage.getRecipientPhoneNumber(), message);
+                } catch (Exception e) {
+                    System.err.println("Failed to send WhatsApp notification: " + e.getMessage());
+                }
+            }
+
             Long creatorId = existingPackage.getCreatedBy();
             if (creatorId != null) {
                 String notificationMessage = "The status of the package with tracking number " +
-                        existingPackage.getTrackingNumber() + " has been updated to " + status + ".";
+                        existingPackage.getTrackingNumber() + " has been updated to " + newStatus + ".";
 
                 notificationService.createNotification(notificationMessage, "package-status", creatorId);
                 notificationService.sendWebSocketNotification(notificationMessage, "package-status", creatorId);
@@ -155,7 +189,11 @@ public class PackageService {
                     pkg.setPriority("Standard");
                 }
 
-                pkg.setCreatedBy(creatorId); // Set creator ID for each package
+                if (pkg.getRecipientPhoneNumber() == null || pkg.getRecipientPhoneNumber().isEmpty()) {
+                    throw new RuntimeException("Recipient phone number is mandatory for bulk creation.");
+                }
+
+                pkg.setCreatedBy(creatorId);
             }
 
             List<Package> savedPackages = packageRepository.saveAll(packages);
